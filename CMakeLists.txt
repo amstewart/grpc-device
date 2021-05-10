@@ -130,7 +130,6 @@ function(GenerateGrpcSources proto_file proto_path proto_srcs proto_hdrs grpc_sr
     ARGS --grpc_out "${proto_out_path}"
       --cpp_out "${proto_out_path}"
       -I "${proto_path}"
-      -I ${CMAKE_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src/
       -I ${CMAKE_SOURCE_DIR}/source/protobuf
       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
       "${proto_file}"
