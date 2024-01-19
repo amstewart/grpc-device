@@ -490,7 +490,7 @@ target_link_libraries(ni_grpc_device_server
    ${_PROTOBUF_LIBPROTOBUF}
    ${CMAKE_DL_LIBS}
    nlohmann_json::nlohmann_json
-   utf8cpp
+   utf8cpp::utf8cpp
    )
 
 set_target_properties(ni_grpc_device_server PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
