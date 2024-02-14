@@ -12,33 +12,54 @@ if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
   set(CMAKE_SYSTEM_PROCESSOR "amd64")
 endif()
 
-#----------------------------------------------------------------------
-# Use the grpc targets directly from this build, only when not cross-compiling.
-#----------------------------------------------------------------------
-if(CMAKE_CROSSCOMPILING)
-  find_program(_PROTOBUF_PROTOC protoc)
-  find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
 
-  if(NOT _GRPC_DEVICE_NILRT_LEGACY_TOOLCHAIN)
-    find_package(gRPC REQUIRED)
-    find_library(_REFLECTION grpc++_reflection)
-    find_library(_GRPC_GRPCPP grpc++)
-    find_library(_PROTOBUF_LIBPROTOBUF protobuf)
-  else()
-    add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc EXCLUDE_FROM_ALL)
-    set(_REFLECTION grpc++_reflection)
-    set(_GRPC_GRPCPP grpc++)
-    set(_PROTOBUF_LIBPROTOBUF libprotobuf)
-  endif()
+#---
+# Conifguration options
+#---
+option(USE_NILRT_LEGACY_TOOLCHAIN "Enable to use tools and libraries from a NILRT compile toolchain." OFF)
+option(USE_SUBMODULE_LIBS "Enable to link against the submodule libraries, rather than their native-OS equivalents." ON)
 
-else()
+#----------------------------------------------------------------------
+# Setup build dependencies, according to the toolchain options.
+#----------------------------------------------------------------------
+
+if(USE_SUBMODULE_LIBS)
+  # The archetypical WIN32 build case
   add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc EXCLUDE_FROM_ALL)
+  add_subdirectory(third_party/utfcpp ${CMAKE_CURRENT_BINARY_DIR}/utfcpp EXCLUDE_FROM_ALL)
+  include_directories("./third_party/utfcpp/source")
   set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
   set(_REFLECTION grpc++_reflection)
   set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
   set(_GRPC_GRPCPP grpc++)
   set(_PROTOBUF_LIBPROTOBUF libprotobuf)
+
+  add_subdirectory(third_party/json ${CMAKE_CURRENT_BINARY_DIR}/json EXCLUDE_FROM_ALL)
+  enable_testing()
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  add_subdirectory(third_party/gtest ${CMAKE_CURRENT_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
+else()
+  find_program(_PROTOBUF_PROTOC protoc)
+  find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
+
+  if(USE_NILRT_LEGACY_TOOLCHAIN)
+    # The archetypical NILRT SDK toolchain build case
+    add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc EXCLUDE_FROM_ALL)
+    set(_REFLECTION grpc++_reflection)
+    set(_GRPC_GRPCPP grpc++)
+    set(_PROTOBUF_LIBPROTOBUF libprotobuf)
+  else()
+    # The archetypical linux build case (including OpenEmbedded)
+    find_library(_GRPC_GRPCPP grpc++)
+    find_library(_PROTOBUF_LIBPROTOBUF protobuf)
+    find_library(_REFLECTION grpc++_reflection)
+    find_package(gRPC REQUIRED)
+    find_package(GTest REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    find_package(utf8cpp REQUIRED)
+  endif()
 endif()
+
 
 #----------------------------------------------------------------------
 CreateVirtualEnvironment(virtual_environment
@@ -48,18 +69,6 @@ CreateVirtualEnvironment(virtual_environment
     venv
   OUT_PYTHON_EXE
     PYTHON_EXE
-)
-
-#----------------------------------------------------------------------
-# Use the utfcpp targets directly from this build, only when not cross-compiling.
-#----------------------------------------------------------------------
-if(CMAKE_CROSSCOMPILING AND NOT _GRPC_DEVICE_NILRT_LEGACY_TOOLCHAIN)
-  find_package(utf8cpp REQUIRED)
-else()
-  add_subdirectory(third_party/utfcpp ${CMAKE_CURRENT_BINARY_DIR}/utfcpp EXCLUDE_FROM_ALL)
-endif()
-include_directories(
-  "./third_party/utfcpp/source"
 )
 
 #----------------------------------------------------------------------
@@ -240,6 +249,9 @@ function(GenerateGrpcSources)
   cmake_parse_arguments(GENERATE_ARGS "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   set(output_files "${GENERATE_ARGS_OUTPUT}")
   set(proto_file "${GENERATE_ARGS_PROTO}")
+  if(USE_SUBMODULE_LIBS)
+    set(protobuf_includes_arg -I ${CMAKE_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src/)
+  endif()
   get_filename_component(proto_path "${proto_file}" PATH)
   # Asssumption: all outputs are in the same directory: use the zero-th.
   list(GET output_files 0 proto_srcs)
@@ -250,7 +262,7 @@ function(GenerateGrpcSources)
     ARGS --grpc_out "${proto_out_path}"
       --cpp_out "${proto_out_path}"
       -I "${proto_path}"
-      -I ${CMAKE_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src/
+      ${protobuf_includes_arg}
       -I ${CMAKE_SOURCE_DIR}/imports/protobuf
       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
       "${proto_file}"
@@ -499,20 +511,6 @@ add_custom_command(
    TARGET ni_grpc_device_server POST_BUILD
    COMMAND  ${PYTHON_EXE} ${codegen_dir}/generate_server_capabilities.py ${metadata_dir}/
             -o $<TARGET_FILE_DIR:ni_grpc_device_server>/)
-
-
-#----------------------------------------------------------------------
-# Add JSON parser and configure google tests
-#----------------------------------------------------------------------
-if(CMAKE_CROSSCOMPILING AND NOT _GRPC_DEVICE_NILRT_LEGACY_TOOLCHAIN)
-  find_package(nlohmann_json REQUIRED)
-  find_package(GTest REQUIRED)
-else()
-  add_subdirectory(third_party/json ${CMAKE_CURRENT_BINARY_DIR}/json EXCLUDE_FROM_ALL)
-  enable_testing()
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  add_subdirectory(third_party/gtest ${CMAKE_CURRENT_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
-endif()
 
 # Link test executable against gtest
 add_executable(IntegrationTestsRunner
