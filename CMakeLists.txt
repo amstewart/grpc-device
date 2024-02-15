@@ -42,6 +42,7 @@ if(USE_SUBMODULE_LIBS)
 else()
   find_program(_PROTOBUF_PROTOC protoc)
   find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
+  find_library(_GRPC_GPR gpr)
 
   if(USE_NILRT_LEGACY_TOOLCHAIN)
     # The archetypical NILRT SDK toolchain build case
@@ -499,6 +500,7 @@ endif()
 target_link_libraries(ni_grpc_device_server
    ${_REFLECTION}
    ${_GRPC_GRPCPP}
+   ${_GRPC_GPR}
    ${_PROTOBUF_LIBPROTOBUF}
    ${CMAKE_DL_LIBS}
    nlohmann_json::nlohmann_json
