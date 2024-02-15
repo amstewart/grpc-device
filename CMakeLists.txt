@@ -5,7 +5,7 @@ project(ni_grpc_device_server
   VERSION 2.5.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(CreateVirtualEnvironment)
+
 
 # Workaround for: https://bugs.chromium.org/p/boringssl/issues/detail?id=423
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
@@ -17,6 +17,7 @@ endif()
 # Conifguration options
 #---
 option(USE_NILRT_LEGACY_TOOLCHAIN "Enable to use tools and libraries from a NILRT compile toolchain." OFF)
+option(USE_PYTHON_VIRTUALENV "Enable to use the automatically-generated python venv, local to this project source." ON)
 option(USE_SUBMODULE_LIBS "Enable to link against the submodule libraries, rather than their native-OS equivalents." ON)
 
 #----------------------------------------------------------------------
@@ -60,16 +61,21 @@ else()
   endif()
 endif()
 
-
-#----------------------------------------------------------------------
-CreateVirtualEnvironment(virtual_environment
-  REQUIREMENTS_TXT
-    ${CMAKE_SOURCE_DIR}/python_build_requirements.txt
-  ENV_NAME
-    venv
-  OUT_PYTHON_EXE
-    PYTHON_EXE
-)
+# Python3 Virtual Environment
+if(USE_PYTHON_VIRTUALENV)
+  include(CreateVirtualEnvironment)
+  CreateVirtualEnvironment(virtual_environment
+    REQUIREMENTS_TXT
+      ${CMAKE_SOURCE_DIR}/python_build_requirements.txt
+    ENV_NAME
+      venv
+    OUT_PYTHON_EXE
+      PYTHON_EXE
+  )
+else()
+  find_package(Python3 REQUIRED)
+  set(PYTHON_EXE ${Python3_EXECUTABLE})
+endif()
 
 #----------------------------------------------------------------------
 # Use C++17 (needed for shared_mutex support on Linux)
@@ -200,7 +206,10 @@ foreach(api ${nidrivers})
       ${nidriver_client_srcs}
       "${service_output_dir}/${api}/${api}_client.cpp")
   endif()
-  set(proto_dependencies ${codegen_dependencies} ${codegen_scripts} virtual_environment)
+  set(proto_dependencies ${codegen_dependencies} ${codegen_scripts})
+  if (USE_PYTHON_VIRTUALENV)
+    list(APPEND proto_dependencies virtual_environment)
+  endif()
   add_custom_command(OUTPUT ${output_files}
     ${gen_command}
     COMMENT "Generating proto file and service for ${api}"
@@ -220,8 +229,11 @@ add_custom_command(
   DEPENDS
     ${all_codegen_dependencies}
     ${codegen_scripts}
-    virtual_environment
 )
+if(USE_PYTHON_VIRTUALENV)
+  add_dependencies(${service_output_dir}/register_all_services.cpp virtual_environment)
+  add_dependencies(${service_output_dir}/register_all_services.h   virtual_environment)
+endif()
 
 set(nidriver_service_srcs
     ${nidriver_service_srcs}
