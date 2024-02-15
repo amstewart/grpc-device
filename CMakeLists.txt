@@ -43,6 +43,7 @@ else()
   find_program(_PROTOBUF_PROTOC protoc)
   find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
   find_library(_GRPC_GPR gpr)
+  find_library(_ABSEIL_SYNC absl_synchronization REQUIRED)
 
   if(USE_NILRT_LEGACY_TOOLCHAIN)
     # The archetypical NILRT SDK toolchain build case
@@ -498,6 +499,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
 endif()
 
 target_link_libraries(ni_grpc_device_server
+   ${_ABSEIL_SYNC}
    ${_REFLECTION}
    ${_GRPC_GRPCPP}
    ${_GRPC_GPR}
