@@ -498,16 +498,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     PRIVATE "source/server/windows/console_ctrl_handler.cpp")
 endif()
 
+set(server_lib_deps
+  ${_ABSEIL_SYNC}
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_GRPC_GPR}
+  ${_PROTOBUF_LIBPROTOBUF}
+  ${CMAKE_DL_LIBS}
+  nlohmann_json::nlohmann_json
+  utf8cpp::utf8cpp
+)
 target_link_libraries(ni_grpc_device_server
-   ${_ABSEIL_SYNC}
-   ${_REFLECTION}
-   ${_GRPC_GRPCPP}
-   ${_GRPC_GPR}
-   ${_PROTOBUF_LIBPROTOBUF}
-   ${CMAKE_DL_LIBS}
-   nlohmann_json::nlohmann_json
-   utf8cpp::utf8cpp
-   )
+  ${server_lib_deps}
+)
 
 set_target_properties(ni_grpc_device_server PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
 
@@ -582,13 +585,11 @@ add_executable(IntegrationTestsRunner
     find_package(Threads REQUIRED)
 
 target_link_libraries(IntegrationTestsRunner
-    gtest
+    ${server_lib_deps}
     gmock
-    ${_GRPC_GRPCPP}
-    ${CMAKE_DL_LIBS}
+    grpc
+    gtest
     Threads::Threads
-    nlohmann_json::nlohmann_json
-    utf8cpp::utf8cpp
 )
 
 # Ignore the use of deprecated functions in test code
@@ -689,12 +690,13 @@ target_include_directories(UnitTestsRunner
     PRIVATE "source/server")
 
 target_link_libraries(UnitTestsRunner
-    gtest
-    gmock
-    ${_GRPC_GRPCPP}
     ${CMAKE_DL_LIBS}
+    ${server_lib_deps}
+    gmock
+    grpc
+    gtest
     Threads::Threads
-    nlohmann_json::nlohmann_json)
+)
 
 #----------------------------------------------------------------------
 # Copy test asset certificates to binary output certs sub-directory
@@ -713,6 +715,7 @@ endforeach()
 add_library(CompilationTests STATIC ${compilation_test_sources})
 target_link_libraries(CompilationTests
     ${_GRPC_GRPCPP}
+    utf8cpp::utf8cpp
 )
 add_custom_target(generated_nidriver_service_library_hdrs DEPENDS ${nidriver_service_library_hdrs})
 add_dependencies(CompilationTests generated_nidriver_service_library_hdrs)
@@ -817,11 +820,10 @@ endif()
 add_executable(SystemTestsRunner ${system_test_runner_sources})
 
 target_link_libraries(SystemTestsRunner
-    gtest
-    gmock
-    ${_GRPC_GRPCPP}
     ${CMAKE_DL_LIBS}
-    nlohmann_json::nlohmann_json
+    ${server_lib_deps}
+    gmock
+    gtest
 )
 
 # Ignore the use of deprecated functions in test code
