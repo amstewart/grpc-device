@@ -587,7 +587,9 @@ target_link_libraries(IntegrationTestsRunner
     ${_GRPC_GRPCPP}
     ${CMAKE_DL_LIBS}
     Threads::Threads
-    nlohmann_json::nlohmann_json)
+    nlohmann_json::nlohmann_json
+    utf8cpp::utf8cpp
+)
 
 # Ignore the use of deprecated functions in test code
 target_compile_definitions(IntegrationTestsRunner
