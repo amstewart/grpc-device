@@ -26,19 +26,17 @@ option(USE_SUBMODULE_LIBS "Enable to link against the submodule libraries, rathe
 
 if(USE_SUBMODULE_LIBS)
   # The archetypical WIN32 build case
-  add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc EXCLUDE_FROM_ALL)
-  add_subdirectory(third_party/utfcpp ${CMAKE_CURRENT_BINARY_DIR}/utfcpp EXCLUDE_FROM_ALL)
-  include_directories("./third_party/utfcpp/source")
+  add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc)
+  add_subdirectory(third_party/gtest ${CMAKE_CURRENT_BINARY_DIR}/gtest)
+  add_subdirectory(third_party/json ${CMAKE_CURRENT_BINARY_DIR}/json)
+  add_subdirectory(third_party/utfcpp ${CMAKE_CURRENT_BINARY_DIR}/utfcpp)
+
   set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
   set(_REFLECTION grpc++_reflection)
   set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
   set(_GRPC_GRPCPP grpc++)
   set(_PROTOBUF_LIBPROTOBUF libprotobuf)
-
-  add_subdirectory(third_party/json ${CMAKE_CURRENT_BINARY_DIR}/json EXCLUDE_FROM_ALL)
-  enable_testing()
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  add_subdirectory(third_party/gtest ${CMAKE_CURRENT_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
+  set(_UTF8CPP utf8cpp)
 else()
   find_program(_PROTOBUF_PROTOC protoc)
   find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
@@ -60,6 +58,7 @@ else()
     find_package(GTest REQUIRED)
     find_package(nlohmann_json REQUIRED)
     find_package(utf8cpp REQUIRED)
+    set(_UTF8CPP utf8cpp::utf8cpp)
   endif()
 endif()
 
@@ -78,6 +77,9 @@ else()
   find_package(Python3 REQUIRED)
   set(PYTHON_EXE ${Python3_EXECUTABLE})
 endif()
+
+enable_testing()
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 #----------------------------------------------------------------------
 # Use C++17 (needed for shared_mutex support on Linux)
@@ -504,10 +506,11 @@ set(server_lib_deps
   ${_GRPC_GRPCPP}
   ${_GRPC_GPR}
   ${_PROTOBUF_LIBPROTOBUF}
+  ${_UTF8CPP}
   ${CMAKE_DL_LIBS}
   nlohmann_json::nlohmann_json
-  utf8cpp::utf8cpp
 )
+
 target_link_libraries(ni_grpc_device_server
   ${server_lib_deps}
 )
@@ -713,9 +716,10 @@ foreach(api ${nidrivers_to_build})
     "${service_output_dir}/${api}/${api}_compilation_test.cpp")
 endforeach()
 add_library(CompilationTests STATIC ${compilation_test_sources})
+
 target_link_libraries(CompilationTests
     ${_GRPC_GRPCPP}
-    utf8cpp::utf8cpp
+    ${_UTF8CPP}
 )
 add_custom_target(generated_nidriver_service_library_hdrs DEPENDS ${nidriver_service_library_hdrs})
 add_dependencies(CompilationTests generated_nidriver_service_library_hdrs)
