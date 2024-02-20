@@ -26,6 +26,9 @@ option(USE_SUBMODULE_LIBS "Enable to link against the submodule libraries, rathe
 
 if(USE_SUBMODULE_LIBS)
   # The archetypical WIN32 build case
+  # protobuf_INSTALL must be turned OFF whenever building it as a cmake subdir.
+  set(protobuf_INSTALL OFF)
+
   add_subdirectory(third_party/grpc ${CMAKE_CURRENT_BINARY_DIR}/grpc)
   add_subdirectory(third_party/gtest ${CMAKE_CURRENT_BINARY_DIR}/gtest)
   add_subdirectory(third_party/json ${CMAKE_CURRENT_BINARY_DIR}/json)
