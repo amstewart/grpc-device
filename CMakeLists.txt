@@ -36,6 +36,7 @@ if(USE_SUBMODULE_LIBS)
 
   set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
   set(_REFLECTION grpc++_reflection)
+  set(_GRPC grpc)
   set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:grpc_cpp_plugin>)
   set(_GRPC_GRPCPP grpc++)
   set(_PROTOBUF_LIBPROTOBUF libprotobuf)
@@ -57,10 +58,13 @@ else()
     find_library(_GRPC_GRPCPP grpc++)
     find_library(_PROTOBUF_LIBPROTOBUF protobuf)
     find_library(_REFLECTION grpc++_reflection)
+
     find_package(gRPC REQUIRED)
     find_package(GTest REQUIRED)
     find_package(nlohmann_json REQUIRED)
     find_package(utf8cpp REQUIRED)
+
+    set(_GRPC gRPC::grpc)
     set(_UTF8CPP utf8cpp::utf8cpp)
   endif()
 endif()
@@ -505,10 +509,11 @@ endif()
 
 set(server_lib_deps
   ${_ABSEIL_SYNC}
-  ${_REFLECTION}
-  ${_GRPC_GRPCPP}
   ${_GRPC_GPR}
+  ${_GRPC_GRPCPP}
+  ${_GRPC}
   ${_PROTOBUF_LIBPROTOBUF}
+  ${_REFLECTION}
   ${_UTF8CPP}
   ${CMAKE_DL_LIBS}
   nlohmann_json::nlohmann_json
