@@ -167,6 +167,10 @@ endif()
 
 set(all_codegen_dependencies "")
 
+if(USE_PYTHON_VIRTUALENV)
+  list(APPEND all_codegen_dependencies virtual_environment)
+endif()
+
 foreach(api ${nidrivers})
   set(codegen_dependencies
     "${metadata_dir}/${api}/attributes.py"
@@ -241,10 +245,6 @@ add_custom_command(
     ${all_codegen_dependencies}
     ${codegen_scripts}
 )
-if(USE_PYTHON_VIRTUALENV)
-  add_dependencies(${service_output_dir}/register_all_services.cpp virtual_environment)
-  add_dependencies(${service_output_dir}/register_all_services.h   virtual_environment)
-endif()
 
 set(nidriver_service_srcs
     ${nidriver_service_srcs}
